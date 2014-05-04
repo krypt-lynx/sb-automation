@@ -1,6 +1,8 @@
 function init(args)  
   entity.setInteractive(true)
   if args == false then
+    gameloop.init()
+    datawire.init()
     pipes.init({liquidPipe})
     local initInv = entity.configParameter("initialInventory")
     if initInv and storage.liquid == nil then
@@ -52,9 +54,15 @@ function onInteraction(args)
   return { "ShowPopup", { message = popupMessage }}
 end
 
+function onNodeConnectionChange()
+  datawire.onNodeConnectionChange()
+end
+
 function main(args)
   pipes.update(entity.dt())
-  
+  gameloop.update()
+  datawire.update()
+
   local liquidState = self.liquidMap[storage.liquid[1]]
   if liquidState then
     entity.setAnimationState("liquid", liquidState)
@@ -83,6 +91,20 @@ function main(args)
   self.pushTimer = self.pushTimer + entity.dt()
   
   clearLiquid()
+  sendData()
+end
+
+function sendData()
+  local count = storage.liquid and storage.liquid[2] or 0
+  local capacity = self.capacity
+
+  print("tank ", count, "/", capacity)
+
+  entity.setOutboundNodeLevel(0, count > 0)
+  datawire.sendData(count, "number", 0)
+
+  entity.setOutboundNodeLevel(1, count == capacity)
+  datawire.sendData(capacity - count, "number", 1)
 end
 
 function clearLiquid()
